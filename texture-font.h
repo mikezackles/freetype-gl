@@ -34,6 +34,8 @@
 #ifndef __TEXTURE_FONT_H__
 #define __TEXTURE_FONT_H__
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -211,8 +213,6 @@ typedef struct texture_glyph_t
 
 } texture_glyph_t;
 
-
-
 /**
  *  Texture font structure.
  */
@@ -234,6 +234,7 @@ typedef struct texture_font_t
     enum {
         TEXTURE_FONT_FILE = 0,
         TEXTURE_FONT_MEMORY,
+        TEXTURE_FONT_STREAM,
     } location;
 
     union {
@@ -249,6 +250,11 @@ typedef struct texture_font_t
             const void *base;
             size_t size;
         } memory;
+
+        /**
+         * Generic stream, for when location == TEXTURE_FONT_STREAM
+         */
+        FT_Stream stream;
     };
 
     /**
@@ -379,6 +385,26 @@ typedef struct texture_font_t
                                 float pt_size,
                                 const void *memory_base,
                                 size_t memory_size );
+
+/**
+ * This function creates a new texture font from a stream pointer.  The texture
+ * atlas is used to store glyph on demand. Note the depth of the atlas will
+ * determine if the font is rendered as alpha channel only (depth = 1) or RGB
+ * (depth = 3) that correspond to subpixel rendering (if available on your
+ * freetype implementation).
+ *
+ * @param atlas       A texture atlas
+ * @param pt_size     Size of font to be created (in points)
+ * @param stream      Stream location in memory
+ * @param read        Callback function for reading from the stream
+ * @param size        Size of stream, in bytes
+ *
+ * @return A new empty font (no glyph inside yet)
+ *
+ */
+  texture_font_t *
+  texture_font_new_from_stream(texture_atlas_t *atlas, const float pt_size,
+          void *stream, FT_Stream_IoFunc read, unsigned long size);
 
 /**
  * Delete a texture font. Note that this does not delete the glyph from the

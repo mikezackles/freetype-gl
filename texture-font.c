@@ -65,6 +65,7 @@ texture_font_load_face(texture_font_t *self, float size,
         FT_Library *library, FT_Face *face)
 {
     FT_Error error;
+    FT_Open_Args args;
     FT_Matrix matrix = {
         (int)((1.0/HRES) * 0x10000L),
         (int)((0.0)      * 0x10000L),
@@ -91,6 +92,11 @@ texture_font_load_face(texture_font_t *self, float size,
     case TEXTURE_FONT_MEMORY:
         error = FT_New_Memory_Face(*library,
             self->memory.base, self->memory.size, 0, face);
+        break;
+    case TEXTURE_FONT_STREAM:
+        args.flags = FT_OPEN_STREAM;
+        args.stream = self->stream;
+        error = FT_Open_Face(*library, &args, 0, face);
         break;
     }
 
@@ -265,7 +271,10 @@ texture_font_init(texture_font_t *self)
     assert(self->size > 0);
     assert((self->location == TEXTURE_FONT_FILE && self->filename)
         || (self->location == TEXTURE_FONT_MEMORY
-            && self->memory.base && self->memory.size));
+            && self->memory.base && self->memory.size)
+        || (self->location == TEXTURE_FONT_STREAM
+            && self->stream->descriptor.pointer && self->stream->read
+            && self->stream->size > 0));
 
     self->glyphs = vector_new(sizeof(texture_glyph_t *));
     self->height = 0;
@@ -379,6 +388,44 @@ texture_font_new_from_memory(texture_atlas_t *atlas, float pt_size,
     return self;
 }
 
+// ------------------------------------------- texture_font_new_from_stream ---
+texture_font_t *
+texture_font_new_from_stream(texture_atlas_t *atlas, const float pt_size,
+        void *stream, FT_Stream_IoFunc read, unsigned long size)
+{
+    texture_font_t *self;
+
+    assert(stream && read && size > 0);
+
+    self = calloc(1, sizeof(*self));
+    if (!self) {
+        fprintf(stderr,
+                "line %d: No more memory for allocating data\n", __LINE__);
+        return NULL;
+    }
+
+    self->atlas = atlas;
+    self->size  = pt_size;
+
+    self->location = TEXTURE_FONT_STREAM;
+    self->stream = (FT_Stream)calloc(1, sizeof(*self->stream));
+    if(self->stream == NULL) {
+        fprintf( stderr,
+                "line %d: No more memory for allocating data\n", __LINE__);
+        return NULL;
+    }
+    self->stream->descriptor.pointer = stream;
+    self->stream->read = read;
+    self->stream->size = size;
+
+    if (texture_font_init(self)) {
+        texture_font_delete(self);
+        return NULL;
+    }
+
+    return self;
+}
+
 // ---------------------------------------------------- texture_font_delete ---
 void
 texture_font_delete( texture_font_t *self )
@@ -389,7 +436,13 @@ texture_font_delete( texture_font_t *self )
     assert( self );
 
     if(self->location == TEXTURE_FONT_FILE && self->filename)
+    {
         free( self->filename );
+    }
+    else if (self->location == TEXTURE_FONT_STREAM && self->stream)
+    {
+        free( self->stream );
+    }
 
     for( i=0; i<vector_size( self->glyphs ); ++i)
     {
