@@ -30,6 +30,7 @@
 // those of the authors and should not be interpreted as representing official
 // policies, either expressed or implied, of Nicolas P. Rougier.
 // ----------------------------------------------------------------------------
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -88,27 +89,36 @@ shader_compile( const char* source,
 // ------------------------------------------------------------ shader_load ---
 GLuint
 shader_load( const char * vert_filename,
-              const char * frag_filename )
+             const char * frag_filename )
+{
+    assert( vert_filename && strlen( vert_filename )
+         && frag_filename && strlen( frag_filename ) );
+
+    char *vert_source = shader_read( vert_filename );
+    char *frag_source = shader_read( frag_filename );
+    GLuint result = shader_load_from_source( vert_source, frag_source );
+    free( vert_source );
+    free( frag_source );
+
+    return result;
+}
+
+GLuint
+shader_load_from_source( const char * vert_source,
+                         const char * frag_source )
 {
     GLuint handle = glCreateProgram( );
     GLint link_status;
 
-    if( vert_filename && strlen( vert_filename ) )
-    {
-        char *vert_source = shader_read( vert_filename );
-        GLuint vert_shader = shader_compile( vert_source, GL_VERTEX_SHADER);
-        glAttachShader( handle, vert_shader);
-        glDeleteShader( vert_shader );
-        free( vert_source );
-    }
-    if( frag_filename && strlen( frag_filename ) )
-    {
-        char *frag_source = shader_read( frag_filename );
-        GLuint frag_shader = shader_compile( frag_source, GL_FRAGMENT_SHADER);
-        glAttachShader( handle, frag_shader);
-        glDeleteShader( frag_shader );
-        free( frag_source );
-    }
+    assert( vert_source && frag_source );
+
+    GLuint vert_shader = shader_compile( vert_source, GL_VERTEX_SHADER);
+    glAttachShader( handle, vert_shader);
+    glDeleteShader( vert_shader );
+
+    GLuint frag_shader = shader_compile( frag_source, GL_FRAGMENT_SHADER);
+    glAttachShader( handle, frag_shader);
+    glDeleteShader( frag_shader );
 
     glLinkProgram( handle );
 

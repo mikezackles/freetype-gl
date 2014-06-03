@@ -104,6 +104,19 @@ extern "C" {
 
 
 /**
+ * Build program using vertex and fragment shader sources
+ *
+ * @param  vert_source vertex shader source
+ * @param  frag_source fragment shader source
+ *
+ * @return a handle on the built program
+ *
+ */
+ GLuint
+ shader_load_from_source( const char * vert_source,
+                          const char * frag_source );
+
+/**
  *
  */
   GLuint
