@@ -123,6 +123,12 @@ extern "C" {
   shader_get( GLuint self,
               const char * name );
 
+/**
+* Delete the shader
+*/
+  void
+  shader_delete( GLuint handle );
+
 /** @} */
 
 #ifdef __cplusplus

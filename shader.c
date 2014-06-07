@@ -132,3 +132,9 @@ shader_load_from_source( const char * vert_source,
     }
     return handle;
 }
+
+void
+shader_delete( GLuint handle )
+{
+    glDeleteProgram( handle );
+}
